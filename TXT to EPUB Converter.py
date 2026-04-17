@@ -48,13 +48,13 @@ for i, line in enumerate(lines):
     clean_line = line.strip()           # 清理空格
     lines[i] = line.rstrip()+"\n\n"            # 添加两个换行，Markdown需要两个换行来进行段落区分，同时保留段前缩进
     if not clean_line: continue     # 跳过空行
-    if (re.match("[【\\[]?第 *[零一二三四五六七八九十百千0123456789]+ *卷", clean_line)
+    if (re.match("[【\\[]?第 *[零一二三四五六七八九十百千0123456789]+\\s*卷", clean_line)
             or re.match("[【\\[]?简介[]】]?[:：]?$", clean_line)):         # 给简介与整卷添加大标题
         lines[i] = "# "+lines[i]
         title_layer = 2
-    elif (re.match("[【\\[]?第 *[零一二三四五六七八九十百千0123456789]+ *[章回节]", clean_line)
+    elif (re.match("[【\\[]?第 *[零一二三四五六七八九十百千0123456789]+\\s*[章回节]", clean_line)
           or re.match("[\\[【]?彩蛋", clean_line) or re.match("[\\[【]?番外", clean_line)
-          or re.match("[【\\[]? *[零一二三四五六七八九十百千0123456789]+ *$", clean_line)):           # 检测章节标题
+          or re.match("[【\\[]? *[零一二三四五六七八九十百千0123456789]+\\s*$", clean_line)):           # 检测章节标题
         lines[i] = title_layer * "#" + " " + lines[i]
 
 book_stem = Path(filepath).stem
@@ -69,7 +69,7 @@ with open(mdfile, "w", encoding="utf-8") as novel:
     for line in lines:
         if mark == 0:
             if re.match("\\s*作者", line):
-                book_author = re.findall("[^作者:： ].+", line.strip())[0]
+                book_author = re.findall("[^作者:：\\s].+", line.strip())[0]
             if line.startswith("#"):
                 mark = 1
                 novel.write(line)
