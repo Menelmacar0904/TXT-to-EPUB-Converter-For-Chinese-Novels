@@ -22,15 +22,6 @@ while True:
         lines = novel.readlines()
         break
 
-book_stem = Path(filepath).stem
-while lines:
-    first_line = lines[0].strip()
-    # 如果第一行是空行，或者第一行就是书名本身，就把它从列表中删掉
-    if not first_line or first_line == book_stem or first_line in book_stem:
-        lines.pop(0)
-    else:
-        break # 直到遇到真正的内容（比如简介或第一卷），停止清理
-
 title_layer = 1
 for i, line in enumerate(lines):
     clean_line = line.strip()
@@ -45,6 +36,7 @@ for i, line in enumerate(lines):
           or re.match("[【\\[]?[零一二三四五六七八九十百千0123456789]+$", clean_line)):           #检测章节标题
         lines[i] = title_layer * '#' + ' ' + lines[i]
 
+book_stem = Path(filepath).stem
 book_author = simpledialog.askstring(title="输入信息", prompt="请输入作者名称（可选），不填请直接点确定：", parent=root)
 if not book_author: book_author = ''
 
