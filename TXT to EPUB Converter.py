@@ -61,11 +61,11 @@ mdfile = Path(filepath).parent / f"{book_stem}.md"       # 输出的md文件与�
 with open(mdfile, 'w', encoding="utf-8") as novel:    # md文件写入
     mark = 0        #删除章卷前冗余文字
     for i, line in enumerate(lines):
-        if mark == 0 and '#' not in line : continue
-        elif line.startswith('#'):
-            mark = 1
-            novel.write(line)
-        elif mark == 1: novel.write(line)
+        if mark == 0:
+            if line.startswith('#'):
+                mark = 1
+                novel.write(line)
+        else: novel.write(line)
 
 ofile = Path(filepath).parent / f"{book_stem}.epub"
 pypandoc.convert_file(
