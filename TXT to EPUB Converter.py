@@ -7,10 +7,13 @@ from tkinter import filedialog
 from tkinter import simpledialog
 from tkinter import messagebox
 
+# 创建弹窗
+root = tk.Tk()
+root.title("请手动选择文件")
+root.withdraw()
+
+# 打开目标txt文件
 while True:
-    root = tk.Tk()
-    root.title("请手动选择文件")
-    root.withdraw()
     filepath = filedialog.askopenfilename()
     if not filepath.endswith(".txt"):
         if filepath == '':
@@ -22,33 +25,34 @@ while True:
         lines = novel.readlines()
         break
 
-title_layer = 1
+title_layer = 1         # 标题层级记录
+# 转化为.md文件
 for i, line in enumerate(lines):
-    clean_line = line.strip()
-    lines[i] = line.rstrip()+'\n\n'            #添加两个换行，Markdown需要两个换行来进行段落区分
-    if not clean_line: continue
+    clean_line = line.strip()           # 清理空格
+    lines[i] = line.rstrip()+'\n\n'            # 添加两个换行，Markdown需要两个换行来进行段落区分，同时保留段前缩进
+    if not clean_line: continue     # 跳过空行
     if (re.match("[【\\[]?第[零一二三四五六七八九十百千0123456789]+卷", clean_line)
-            or re.match("[【\\[]?简介[]】]?[:：]", clean_line) or clean_line == "简介"):         #给作品相关与整卷添加标题
+            or re.match("[【\\[]?简介[]】]?[:：]?$", clean_line)):         # 给简介与整卷添加大标题
         lines[i] = '# '+lines[i]
         title_layer = 2
     elif (re.match("[【\\[]?第[零一二三四五六七八九十百千0123456789]+[章回节]", clean_line)
           or re.match("[\\[【]?彩蛋", clean_line) or re.match("[\\[【]?番外", clean_line)
-          or re.match("[【\\[]?[零一二三四五六七八九十百千0123456789]+$", clean_line)):           #检测章节标题
+          or re.match("[【\\[]?[零一二三四五六七八九十百千0123456789]+$", clean_line)):           # 检测章节标题
         lines[i] = title_layer * '#' + ' ' + lines[i]
 
 book_stem = Path(filepath).stem
 book_author = simpledialog.askstring(title="输入信息", prompt="请输入作者名称（可选），不填请直接点确定：", parent=root)
 if not book_author: book_author = ''
 
-mdfile = Path(filepath).parent / f"{book_stem}.md"       #输出的md文件与输入文件放入同一文件夹
-with open(mdfile, 'w', encoding="utf-8") as novel:    #md文件写入
+mdfile = Path(filepath).parent / f"{book_stem}.md"       # 输出的md文件与输入文件放入同一文件夹
+with open(mdfile, 'w', encoding="utf-8") as novel:    # md文件写入
     mark = 0        #删除章卷前冗余文字
     for i, line in enumerate(lines):
         if mark == 0 and '#' not in line : continue
-        elif '#' in line :
+        elif line.startswith('#'):
             mark = 1
-            novel.writelines(line)
-        elif mark == 1: novel.writelines(line)
+            novel.write(line)
+        elif mark == 1: novel.write(line)
 
 ofile = Path(filepath).parent / f"{book_stem}.epub"
 pypandoc.convert_file(
