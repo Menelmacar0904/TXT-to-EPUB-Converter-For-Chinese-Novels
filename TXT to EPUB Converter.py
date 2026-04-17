@@ -6,11 +6,24 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import simpledialog
 from tkinter import messagebox
+import ctypes
+
+# 高DPI适配
+try:
+    # 针对 Windows 8.1 及以上版本
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+except Exception:
+    try:
+        # 针对 Windows Vista/7
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
 
 # 创建弹窗
 root = tk.Tk()
 root.title("请手动选择文件")
-root.withdraw()
+root.geometry("0x0")
+root.attributes("-alpha", 0.0)      # 把主窗口变为透明，但仍能保持任务栏图标
 
 # 打开目标txt文件
 while True:
