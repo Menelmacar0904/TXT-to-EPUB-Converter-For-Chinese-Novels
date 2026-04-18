@@ -147,5 +147,4 @@ pypandoc.convert_text(
 )
 
 css_file.unlink()
-messagebox.showinfo(title='转换成功',
-                    message=f'恭喜！《{book_stem}》已成功转换为 EPUB 电子书！\n文件已保存为：\n{epub_file}')
+messagebox.showinfo(title='转换成功', message=f'恭喜！《{book_stem}》已成功转换为 EPUB 电子书！\n文件已保存为：\n{epub_file}')
