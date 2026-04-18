@@ -7,6 +7,7 @@ from tkinter import filedialog
 from tkinter import messagebox
 import ctypes
 
+
 # 高DPI适配
 try:
     # 针对 Windows 8.1 及以上版本
@@ -39,62 +40,106 @@ target_encoding = 'utf-8'
 target_errors = 'strict'
 try:
     with open(txt_file, encoding=target_encoding) as test:
-        for i in test: pass
+        test.read(8192)
 except UnicodeDecodeError:          # 如果 utf-8 报错，尝试用 gbk 读取
     target_encoding = 'gbk'
     target_errors = 'ignore'
-    
+
 
 # 正则表达式预编译
-p_section = re.compile('[【\\[]?第 *[零一二三四五六七八九十百千\\d]+\\s*卷[\\s$]')
-p_intro = re.compile('[【\\[]?简介[]】]?[:：]?$')
-p_chapter = re.compile('[【\\[]?第 *[零一二三四五六七八九十百千\\d]+\\s*[章回节集][\\s$]')
-p_easter =  re.compile('[\\[【]?彩蛋')
-p_spinoff = re.compile('[\\[【]?番外')
-p_brief_chap = re.compile('[【\\[]? *[零一二三四五六七八九十百千\\d]+\\s*$')
-p_author = re.compile('\\s*作者')
-p_get_author = re.compile('[^作者:：\\s].+')
-
+p_h1 = re.compile('[【\\[]?第\\s*[零一二两三四五六七八九十百千\\d]+\\s*卷(\\s|$)|'
+                  '[【\\[]?简介[]】]?[:：\\s]')
+p_h2 = re.compile('[【\\[]?第\\s*[零一二两三四五六七八九十百千\\d]+\\s*[章回节集](\\s|$)|'
+                  '[\\[【]?彩蛋[：\\s]|'
+                  '[\\[【]?番外[：\\s]|'
+                  '[【\\[]?[零一二两三四五六七八九十百千\\d]+$')
+p_author_extract = re.compile('作者[:：\\s]*(.*)')
+title_chars = set('第简彩番''0123456789''零一二两三四五六七八九十')  # 标题开头元组，不匹配则直接跳过
 book_stem = Path(txt_file).stem
 book_author = ''
-md_file = Path(txt_file).parent / f'{book_stem}.md'
+markdown_lines = []
+mark = 0            # 正文标记
 
-with (open(txt_file, 'r', encoding=target_encoding, errors=target_errors) as f_in,
-      open(md_file, 'w', encoding='utf-8-sig') as f_out):
-    mark = 0            # 正文标记
+with open(txt_file, 'r', encoding=target_encoding, errors=target_errors) as f_in:
     for line in f_in:
-        if not line.strip(): continue
-        line = line.rstrip() + '\n\n'       # 添加两个换行，在Markdown中分段
+        clean_line = line.strip()
+        if not clean_line: continue
         # 寻找作者
         if mark == 0:
-            if re.match(p_author, line):
-                try:
-                    book_author = re.findall(p_get_author, line.strip())[0]
-                except IndexError:
-                    pass
+            match = p_author_extract.search(line)
+            if match: book_author = match.group(1).strip()
         # 添加标题
-        if re.match(p_section, line) or re.match(p_intro, line):  # 给简介与整卷添加大标题
-            line = '# ' + line
+        if clean_line[0] not in title_chars or len(clean_line) > 40: pass
+        elif p_h1.match(clean_line):  # 给简介与整卷添加大标题
+            clean_line = '# ' + clean_line
             title_layer = 2
             mark = 1
-        elif (re.search(p_chapter, line) or re.match(p_easter, line) or re.match(p_spinoff, line)
-              or re.match(p_brief_chap, line)):  # 检测章节标题
-            line = title_layer * '#' + ' ' + line
+        elif p_h2.match(clean_line):  # 检测章节标题
+            clean_line= title_layer * '#' + ' ' + clean_line
             mark = 1
-        if mark: f_out.write(line)
+        if mark:
+            markdown_lines.append(f"{clean_line}\n\n")
+
+markdown_text = ''.join(markdown_lines)
 
 epub_file = Path(txt_file).parent / f'{book_stem}.epub'         # 输出文件转换
+
+css_file = Path(txt_file).parent / "style.css"
+with open(css_file, "w", encoding="utf-8") as css:
+    # 通用书名与正文样式
+    base_css = """
+        p {
+            text-indent: 2em !important;
+            margin-top: 0.5em !important;
+            margin-bottom: 0.5em !important;
+            line-height: 1.6 !important;
+            text-align: justify !important;
+        }
+        p.noindent {
+            text-indent: 2em !important;
+        }
+        h1.title {
+            text-indent: 0 !important;
+            text-align: center !important;
+            padding-top: 35vh !important;
+            font-size: 2.8em !important;
+            border-bottom: none !important; 
+        }
+        """
+
+    # 标题样式
+    if title_layer == 2:
+        heading_css = """
+            h1 {
+                text-indent: 0; text-align: center;
+                padding-top: 35vh; margin-bottom: 2em; font-size: 2.2em;
+            }
+            h2 {
+                text-indent: 0; text-align: center;
+                padding-top: 5vh; margin-bottom: 1em; font-size: 1.6em;
+            }
+            """
+    else:
+        heading_css = """
+            h1 {
+                text-indent: 0; text-align: center;
+                padding-top: 5vh; margin-bottom: 1em; font-size: 1.6em;
+            }
+            """
+    css.write(base_css + heading_css)
+
 # EPUB文件转换
-pypandoc.convert_file(
-    source_file = str(md_file),
+pypandoc.convert_text(
+    source= markdown_text,
     to = 'epub',
-    format = 'md',
+    format = 'commonmark',
     outputfile = str(epub_file),
     extra_args = ['--metadata', f'title={book_stem}',
                   '--metadata', f'author={book_author}',
                   '--toc', '--toc-depth=2', '--split-level=2',
-                  '--metadata', 'toc-title=目录']
+                  '--metadata', 'toc-title=目录',
+                  f'--css={css_file}']
 )
 
-md_file.unlink()         # 移除中间步骤产生的.md文件
+css_file.unlink()
 messagebox.showinfo(title='转换成功', message=f'恭喜！《{book_stem}》已成功转换为 EPUB 电子书！\n文件已保存为：\n{epub_file}')
