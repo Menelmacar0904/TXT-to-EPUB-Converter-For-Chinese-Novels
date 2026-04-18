@@ -27,20 +27,21 @@ root.attributes("-alpha", 0.0)      # 把主窗口变为透明，但仍能保持
 # 打开目标txt文件
 while True:
     filepath = filedialog.askopenfilename()
-    if not filepath.endswith(".txt"):
-        if filepath == "":
-            messagebox.showwarning(title="未选取文件", message="未选取文件！\n程序将自动退出。")
-            sys.exit()
+    if filepath == "":
+        messagebox.showwarning(title="未选取文件", message="未选取文件！\n程序将自动退出。")
+        sys.exit()
+    elif not filepath.endswith(".txt"):
         messagebox.showwarning(title="格式错误", message="选中的不是.txt文件！\n请重新选取.txt格式文件。")
         continue
-    try:
-        with open(filepath, encoding="utf-8") as novel:
-            lines = novel.readlines()
+    else:
+        try:
+            with open(filepath, encoding="utf-8") as novel:
+                lines = novel.readlines()
+                break
+        except UnicodeDecodeError:          # 如果 utf-8 报错，尝试用 gbk 读取
+            with open(filepath, encoding="gbk", errors="ignore") as novel:
+                lines = novel.readlines()
             break
-    except UnicodeDecodeError:          # 如果 utf-8 报错，尝试用 gbk 读取
-        with open(filepath, encoding="gbk", errors="ignore") as novel:
-            lines = novel.readlines()
-        break
 
 title_layer = 1         # 标题层级记录
 # 转化为.md文件
@@ -59,7 +60,6 @@ for i, line in enumerate(lines):
 
 book_stem = Path(filepath).stem
 book_author = ""
-if not book_author: book_author = ""
 
 mdfile = Path(filepath).parent / f"{book_stem}.md"       # 输出的md文件与输入文件放入同一文件夹
 # md文件写入
