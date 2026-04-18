@@ -63,13 +63,16 @@ book_author = ""
 
 mdfile = Path(filepath).parent / f"{book_stem}.md"       # 输出的md文件与输入文件放入同一文件夹
 # md文件写入
-with open(mdfile, "w", encoding="utf-8") as novel:
+with open(mdfile, "w", encoding="utf-8-sig") as novel:
     # 删除章卷前冗余文字
     mark = 0
     for line in lines:
         if mark == 0:
             if re.match("\\s*作者", line):
-                book_author = re.findall("[^作者:：\\s].+", line.strip())[0]
+                try:
+                    book_author = re.findall("[^作者:：\\s].+", line.strip())[0]
+                except IndexError:
+                    pass
             if line.startswith("#"):
                 mark = 1
                 novel.write(line)
@@ -86,5 +89,5 @@ pypandoc.convert_file(
     extra_args = ["--metadata", f"title={book_stem}", "--metadata", f"author={book_author}",
                 "--toc", "--toc-depth=2", "--split-level=2"]
 )
-
+mdfile.unlink()         # 移除中间步骤产生的.md文件
 messagebox.showinfo(title="转换成功", message=f"恭喜！《{book_stem}》已成功转换为 EPUB 电子书！\n文件已保存为：\n{ofile}")
