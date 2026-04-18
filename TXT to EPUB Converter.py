@@ -24,69 +24,77 @@ root.title('TXT转EPUB工具')
 root.geometry('0x0')
 root.attributes('-alpha', 0)      # 把主窗口变为透明，但仍能保持任务栏图标
 
+title_layer = 1         # 标题层级记录
+
 # 打开目标txt文件
 while True:
-    filepath = filedialog.askopenfilename(title='请选择要转换的txt文本文件', filetypes=[('文本文件', '*.txt')])
-    if filepath == '':
+    txt_file = filedialog.askopenfilename(title='请选择要转换的txt文本文件', filetypes=[('文本文件', '*.txt')])
+    if txt_file == '':
         messagebox.showwarning(title='未选取文件', message='未选取文件！\n程序将自动退出。')
         sys.exit()
-    else:
-        try:
-            with open(filepath, encoding='utf-8') as novel:
-                lines = novel.readlines()
-                break
-        except UnicodeDecodeError:          # 如果 utf-8 报错，尝试用 gbk 读取
-            with open(filepath, encoding='gbk', errors='ignore') as novel:
-                lines = novel.readlines()
-            break
+    else: break
 
-title_layer = 1         # 标题层级记录
-# 转化为.md文件
-for i, line in enumerate(lines):
-    clean_line = line.strip()           # 清理空格
-    lines[i] = line.rstrip()+'\n\n'            # 添加两个换行，Markdown需要两个换行来进行段落区分，同时保留段前缩进
-    if not clean_line: continue     # 跳过空行
-    if (re.match('[【\\[]?第 *[零一二三四五六七八九十百千0123456789]+\\s*卷', clean_line)
-            or re.match('[【\\[]?简介[]】]?[:：]?$', clean_line)):         # 给简介与整卷添加大标题
-        lines[i] = '# '+lines[i]
-        title_layer = 2
-    elif (re.match('[【\\[]?第 *[零一二三四五六七八九十百千0123456789]+\\s*[章回节]', clean_line)
-          or re.match('[\\[【]?彩蛋', clean_line) or re.match('[\\[【]?番外', clean_line)
-          or re.match('[【\\[]? *[零一二三四五六七八九十百千0123456789]+\\s*$', clean_line)):           # 检测章节标题
-        lines[i] = title_layer * '#' + ' ' + lines[i]
+# 检测目标文件编码
+target_encoding = 'utf-8'
+target_errors = 'strict'
+try:
+    with open(txt_file, encoding=target_encoding) as test:
+        for i in test: pass
+except UnicodeDecodeError:          # 如果 utf-8 报错，尝试用 gbk 读取
+    target_encoding = 'gbk'
+    target_errors = 'ignore'
+    
 
-book_stem = Path(filepath).stem
+# 正则表达式预编译
+p_section = re.compile('[【\\[]?第 *[零一二三四五六七八九十百千\\d]+\\s*卷[\\s$]')
+p_intro = re.compile('[【\\[]?简介[]】]?[:：]?$')
+p_chapter = re.compile('[【\\[]?第 *[零一二三四五六七八九十百千\\d]+\\s*[章回节集][\\s$]')
+p_easter =  re.compile('[\\[【]?彩蛋')
+p_spinoff = re.compile('[\\[【]?番外')
+p_brief_chap = re.compile('[【\\[]? *[零一二三四五六七八九十百千\\d]+\\s*$')
+p_author = re.compile('\\s*作者')
+p_get_author = re.compile('[^作者:：\\s].+')
+
+book_stem = Path(txt_file).stem
 book_author = ''
+md_file = Path(txt_file).parent / f'{book_stem}.md'
 
-mdfile = Path(filepath).parent / f'{book_stem}.md'       # 输出的md文件与输入文件放入同一文件夹
-# md文件写入
-with open(mdfile, 'w', encoding='utf-8-sig') as novel:
-    # 删除章卷前冗余文字
-    mark = 0
-    for line in lines:
+with (open(txt_file, 'r', encoding=target_encoding, errors=target_errors) as f_in,
+      open(md_file, 'w', encoding='utf-8-sig') as f_out):
+    mark = 0            # 正文标记
+    for line in f_in:
+        if not line.strip(): continue
+        line = line.rstrip() + '\n\n'       # 添加两个换行，在Markdown中分段
+        # 寻找作者
         if mark == 0:
-            if re.match('\\s*作者', line):
+            if re.match(p_author, line):
                 try:
-                    book_author = re.findall('[^作者:：\\s].+', line.strip())[0]
+                    book_author = re.findall(p_get_author, line.strip())[0]
                 except IndexError:
                     pass
-            if line.startswith('#'):
-                mark = 1
-                novel.write(line)
-        else:
-            novel.write(line)
+        # 添加标题
+        if re.match(p_section, line) or re.match(p_intro, line):  # 给简介与整卷添加大标题
+            line = '# ' + line
+            title_layer = 2
+            mark = 1
+        elif (re.search(p_chapter, line) or re.match(p_easter, line) or re.match(p_spinoff, line)
+              or re.match(p_brief_chap, line)):  # 检测章节标题
+            line = title_layer * '#' + ' ' + line
+            mark = 1
+        if mark: f_out.write(line)
 
-ofile = Path(filepath).parent / f'{book_stem}.epub'         # 输出文件转换
+epub_file = Path(txt_file).parent / f'{book_stem}.epub'         # 输出文件转换
 # EPUB文件转换
 pypandoc.convert_file(
-    source_file = str(mdfile),
+    source_file = str(md_file),
     to = 'epub',
     format = 'md',
-    outputfile = str(ofile),
+    outputfile = str(epub_file),
     extra_args = ['--metadata', f'title={book_stem}',
                   '--metadata', f'author={book_author}',
                   '--toc', '--toc-depth=2', '--split-level=2',
                   '--metadata', 'toc-title=目录']
 )
-mdfile.unlink()         # 移除中间步骤产生的.md文件
-messagebox.showinfo(title='转换成功', message=f'恭喜！《{book_stem}》已成功转换为 EPUB 电子书！\n文件已保存为：\n{ofile}')
+
+md_file.unlink()         # 移除中间步骤产生的.md文件
+messagebox.showinfo(title='转换成功', message=f'恭喜！《{book_stem}》已成功转换为 EPUB 电子书！\n文件已保存为：\n{epub_file}')
