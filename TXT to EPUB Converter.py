@@ -25,8 +25,6 @@ root.title('TXT转EPUB工具')
 root.geometry('0x0')
 root.attributes('-alpha', 0)      # 把主窗口变为透明，但仍能保持任务栏图标
 
-title_layer = 1         # 标题层级记录
-
 # 打开目标txt文件
 while True:
     txt_file = filedialog.askopenfilename(title='请选择要转换的txt文本文件', filetypes=[('文本文件', '*.txt')])
@@ -54,11 +52,13 @@ p_h2 = re.compile('[【\\[]?第\\s*[零一二两三四五六七八九十百千\\
                   '[\\[【]?番外[：\\s]|'
                   '[【\\[]?[零一二两三四五六七八九十百千\\d]+$')
 p_author_extract = re.compile('作者[:：\\s]*(.*)')
+
 title_chars = set('第简彩番''0123456789''零一二两三四五六七八九十')  # 标题开头元组，不匹配则直接跳过
 book_stem = Path(txt_file).stem
 book_author = ''
 markdown_lines = []
 mark = 0            # 正文标记
+title_layer = 1         # 标题层级记录
 
 with open(txt_file, 'r', encoding=target_encoding, errors=target_errors) as f_in:
     for line in f_in:
