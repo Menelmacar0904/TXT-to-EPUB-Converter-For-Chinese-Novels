@@ -44,13 +44,13 @@ except UnicodeDecodeError:  # 如果 utf-8 报错，尝试用 gbk 读取
     target_errors = 'ignore'
 
 # 正则表达式预编译
-p_h1 = re.compile('[【\\[]?第\\s*[零一二两三四五六七八九十百千\\d]+\\s*卷(\\s|$)')
-p_intro = re.compile('[【\\[]?简介[]】]?[:：\\s]')
-p_h2 = re.compile('[【\\[]?第\\s*[零一二两三四五六七八九十百千\\d]+\\s*[章回节集](\\s|$)|'
-                  '[\\[【]?彩蛋[：\\s]|'
-                  '[\\[【]?番外[：\\s]|'
-                  '[【\\[]?[零一二两三四五六七八九十百千\\d]+[.，、]?(\\s|$)')
-p_author_extract = re.compile('作者[:：\\s]*(.*)')
+p_h1 = re.compile('[\\[【]?第\\s*[零一二两三四五六七八九十百千\\d]+\\s*卷[]】]?[：:.，、]?(\\s|$)')
+p_intro = re.compile('[\\[【]??简介[]】]?[：:.，、]?(\\s|$)')
+p_h2 = re.compile('[\\[【]?第\\s*[零一二两三四五六七八九十百千\\d]+\\s*[章回节集][]】]?[：:.，、]?(\\s|$)|'
+                  '[\\[【]?彩蛋[]】]?[：:.，、]?(\\s|$)|'
+                  '[\\[【]?番外[]】]?[：:.，、]?(\\s|$)|'
+                  '[\\[【]?[零一二两三四五六七八九十百千\\d]+[]】]?[：:.，、]?(\\s|$)')
+p_author_extract = re.compile('[\\[【]?作者[]】]?[：:.，、\\s]*(.*)')
 
 title_chars = set('第简彩番''0123456789''零一二两三四五六七八九十')  # 标题开头元组，不匹配则直接跳过
 book_stem = Path(txt_file).stem
@@ -147,4 +147,4 @@ pypandoc.convert_text(
 )
 
 css_file.unlink()
-messagebox.showinfo(title='转换成功', message=f'恭喜！《{book_stem}》已成功转换为 EPUB 电子书！\n文件已保存为：\n{epub_file}')
+messagebox.showinfo(title='转换成功', message=f'恭喜！《{book_stem}》已成功转换为 EPUB 电子书！\n文件已保存为：:\n{epub_file}')
